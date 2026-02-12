@@ -25,16 +25,6 @@ export default function App() {
     setInputs((prev) => ({ ...prev, [key]: value }))
   }
 
-  const updatePackageMix = (key: keyof Inputs['packageMix']) =>
-    (event: ChangeEvent<HTMLInputElement>) => {
-      const raw = parseNumber(event.target.value)
-      const value = Math.min(Math.max(raw, 0), 100)
-      setInputs((prev) => ({
-        ...prev,
-        packageMix: { ...prev.packageMix, [key]: value },
-      }))
-    }
-
   const commitServiceMix = (id: string, rawValue: string) => {
     const trimmed = rawValue.trim()
     if (!trimmed) {
