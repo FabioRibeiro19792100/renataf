@@ -18,6 +18,14 @@ export default function App() {
   const [serviceTicketDraft, setServiceTicketDraft] = useState<Record<string, string>>({})
   const [serviceMixDraft, setServiceMixDraft] = useState<Record<string, string>>({})
 
+  useEffect(() => {
+    if (window.innerWidth <= 720) {
+      document
+        .querySelectorAll('details.card-accordion')
+        .forEach((detail) => detail.removeAttribute('open'))
+    }
+  }, [])
+
   const results = useMemo(() => calculate(inputs), [inputs])
 
   const updateField = (key: keyof Inputs) => (event: ChangeEvent<HTMLInputElement>) => {
@@ -102,7 +110,7 @@ export default function App() {
 
       <h2 className="section-title">Resultados</h2>
       <section className="cards">
-        <details className="card card-accordion" open>
+        <details className="card card-accordion">
           <summary className="card-summary">
             <div>
               <p>Receita mensal</p>
@@ -115,7 +123,7 @@ export default function App() {
             <div className="row"><span>Receita anual</span><strong>{formatCurrency(results.revenue * 12)}</strong></div>
           </div>
         </details>
-        <details className="card card-accordion" open>
+        <details className="card card-accordion">
           <summary className="card-summary">
             <div>
               <p>Despesas mensais</p>
@@ -129,7 +137,7 @@ export default function App() {
             <div className="row"><span>Fixos</span><strong>{formatCurrency(results.fixedCosts)}</strong></div>
           </div>
         </details>
-        <details className="card card-accordion highlight" open>
+        <details className="card card-accordion highlight">
           <summary className="card-summary">
             <div>
               <p>Resultado mensal</p>
@@ -153,23 +161,23 @@ export default function App() {
           <div className="group">
             <div className="field">
               <label>Atendimentos/dia (quente)</label>
-              <input type="text" value={inputs.atendHot} onChange={updateField('atendHot')} />
+              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.atendHot} onChange={updateField('atendHot')} />
             </div>
             <div className="field">
               <label>Atendimentos/dia (frio)</label>
-              <input type="text" value={inputs.atendCold} onChange={updateField('atendCold')} />
+              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.atendCold} onChange={updateField('atendCold')} />
             </div>
             <div className="field">
               <label>Dias quentes/mês</label>
-              <input type="text" value={inputs.daysHot} onChange={updateField('daysHot')} />
+              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.daysHot} onChange={updateField('daysHot')} />
             </div>
             <div className="field">
               <label>Dias frios/mês</label>
-              <input type="text" value={inputs.daysCold} onChange={updateField('daysCold')} />
+              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.daysCold} onChange={updateField('daysCold')} />
             </div>
             <div className="field">
               <label>No-show (%)</label>
-              <input type="text" value={inputs.noShowRate * 100} onChange={(e) => setInputs((prev) => ({
+              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.noShowRate * 100} onChange={(e) => setInputs((prev) => ({
                 ...prev,
                 noShowRate: parseNumber(e.target.value) / 100,
               }))} />
@@ -185,22 +193,22 @@ export default function App() {
           <div className="group">
             <div className="field">
               <label>Custo variável por sessão</label>
-              <input type="text" value={inputs.variableCostPerSession} onChange={updateField('variableCostPerSession')} />
+              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.variableCostPerSession} onChange={updateField('variableCostPerSession')} />
             </div>
             <div className="field">
               <label>Extra variável por sessão</label>
-              <input type="text" value={inputs.extraVariablePerSession} onChange={updateField('extraVariablePerSession')} />
+              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.extraVariablePerSession} onChange={updateField('extraVariablePerSession')} />
             </div>
             <div className="field">
               <label>Comissão (%)</label>
-              <input type="text" value={inputs.commissionRate * 100} onChange={(e) => setInputs((prev) => ({
+              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.commissionRate * 100} onChange={(e) => setInputs((prev) => ({
                 ...prev,
                 commissionRate: parseNumber(e.target.value) / 100,
               }))} />
             </div>
             <div className="field">
               <label>Taxa de cartão (%)</label>
-              <input type="text" value={inputs.cardFeeRate * 100} onChange={(e) => setInputs((prev) => ({
+              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.cardFeeRate * 100} onChange={(e) => setInputs((prev) => ({
                 ...prev,
                 cardFeeRate: parseNumber(e.target.value) / 100,
               }))} />
@@ -211,15 +219,15 @@ export default function App() {
             <h4>Custos fixos</h4>
             <div className="field">
               <label>Nº de terapeutas</label>
-              <input type="text" value={inputs.therapists} onChange={updateField('therapists')} />
+              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.therapists} onChange={updateField('therapists')} />
             </div>
             <div className="field">
               <label>Salário fixo por terapeuta</label>
-              <input type="text" value={inputs.fixedSalary} onChange={updateField('fixedSalary')} />
+              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.fixedSalary} onChange={updateField('fixedSalary')} />
             </div>
             <div className="field">
               <label>Outros custos fixos</label>
-              <input type="text" value={inputs.otherFixedCosts} onChange={updateField('otherFixedCosts')} />
+              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.otherFixedCosts} onChange={updateField('otherFixedCosts')} />
             </div>
           </div>
         </div>
@@ -232,18 +240,20 @@ export default function App() {
               <p className="warning">A soma deve ser 100%. Ajuste manualmente.</p>
             )}
           </div>
-          <div className="mix-table">
+          <div className="mix-section">
+            <h4 className="mix-subtitle">Ticket médio (R$)</h4>
+            <div className="mix-table">
             <div className="mix-head">
               <span>Serviço</span>
-              <span>Ticket médio</span>
-              <span>%</span>
+              <span>Ticket médio (R$)</span>
             </div>
             {services.map((service) => (
-              <div className="mix-row" key={service.id}>
+              <div className="mix-row mix-row-2col" key={service.id}>
                 <span>{service.name} {service.duration}</span>
-                <label className="mix-label-mobile">Ticket médio</label>
                 <input
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*[.,]?[0-9]*"
                   value={
                     serviceTicketDraft[service.id] ??
                     (inputs.serviceTicketOverride[service.id] ??
@@ -262,9 +272,24 @@ export default function App() {
                     })
                   }}
                 />
-                <label className="mix-label-mobile">Percentual</label>
+              </div>
+            ))}
+            </div>
+          </div>
+          <div className="mix-section">
+            <h4 className="mix-subtitle">Percentual (%)</h4>
+            <div className="mix-table">
+            <div className="mix-head">
+              <span>Serviço</span>
+              <span>%</span>
+            </div>
+            {services.map((service) => (
+              <div className="mix-row mix-row-2col" key={`${service.id}-pct`}>
+                <span>{service.name} {service.duration}</span>
                 <input
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*[.,]?[0-9]*"
                   value={
                     serviceMixDraft[service.id] ??
                     String(inputs.serviceMix[service.id] ?? '')
@@ -296,10 +321,10 @@ export default function App() {
                 />
               </div>
             ))}
-            <div className="mix-total">
+            <div className="mix-total mix-total-2col">
               <span>Total</span>
-              <span />
               <span>{formatNumber(results.serviceMixSum)}%</span>
+            </div>
             </div>
           </div>
         </div>
