@@ -294,6 +294,24 @@ input {
   background: #fbfaf7;
 }
 
+input[type='range'] {
+  width: 100%;
+}
+
+.range-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.range-value {
+  min-width: 64px;
+  text-align: right;
+  font-size: 12px;
+  color: #6b6559;
+}
+
 input[type='number'] {
   -moz-appearance: textfield;
 }
@@ -490,10 +508,6 @@ th {
     border-bottom: 1px solid #2f2b24;
     padding: 16px 18px;
     margin: -12px -12px 12px;
-    position: fixed;
-    left: 0;
-    right: 0;
-    top: 0;
   }
 
   .mobile-title {
@@ -514,7 +528,7 @@ th {
   }
 
   .page {
-    padding-top: 110px;
+    padding-top: 32px;
   }
 
   .mobile-metrics span {
@@ -556,6 +570,7 @@ th {
     align-items: center;
     gap: 8px;
     flex-wrap: nowrap;
+    justify-content: space-between;
   }
 
   .topbar .ghost {
@@ -567,10 +582,22 @@ th {
   .nav-tabs {
     flex-wrap: nowrap;
     gap: 8px;
+    width: 100%;
   }
 
   .tab {
     padding: 8px 12px;
+    white-space: nowrap;
+  }
+
+  .ghost {
+    white-space: nowrap;
+  }
+
+  .nav-tabs .ghost {
+    padding: 8px 12px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
   }
 
   .nav-tabs {

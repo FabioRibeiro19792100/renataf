@@ -118,10 +118,10 @@ export default function App() {
           >
             Tabelas
           </button>
+          {view === 'dashboard' && (
+            <button className="ghost" onClick={resetInputs}>Resetar variáveis</button>
+          )}
         </nav>
-        {view === 'dashboard' && (
-          <button className="ghost" onClick={resetInputs}>Resetar variáveis</button>
-        )}
       </header>
 
       {view === 'tables' ? (
@@ -134,15 +134,15 @@ export default function App() {
               <div className="mobile-metrics">
                 <div>
                   <span>Receita</span>
-                  <strong>{formatCurrency(results.revenue)}</strong>
+                  <strong>{formatCurrency(results.revenue * (resultPeriod === 'annual' ? 12 : 1))}</strong>
                 </div>
                 <div>
                   <span>Despesas</span>
-                  <strong>{formatCurrency(results.totalExpenses)}</strong>
+                  <strong>{formatCurrency(results.totalExpenses * (resultPeriod === 'annual' ? 12 : 1))}</strong>
                 </div>
                 <div>
                   <span>Resultado</span>
-                  <strong>{formatCurrency(results.result)}</strong>
+                  <strong>{formatCurrency(results.result * (resultPeriod === 'annual' ? 12 : 1))}</strong>
                 </div>
               </div>
             </div>
@@ -152,7 +152,7 @@ export default function App() {
           <p className="eyebrow">Dashboard financeiro</p>
           <h1>SPA • Simulador de Receita e Resultado</h1>
           <p className="sub">
-            Ajuste as variáveis e veja o impacto mensal e anual nas receitas, despesas e resultado.
+            
           </p>
         </div>
         <div />
@@ -228,26 +228,41 @@ export default function App() {
           <div className="group">
             <div className="field">
               <label>Atendimentos/dia (quente)</label>
-              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.atendHot} onChange={updateField('atendHot')} />
+              <div className="range-row">
+                <input type="range" min={0} max={40} step={1} value={inputs.atendHot} onChange={updateField('atendHot')} />
+                <span className="range-value">{inputs.atendHot}</span>
+              </div>
             </div>
             <div className="field">
               <label>Atendimentos/dia (frio)</label>
-              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.atendCold} onChange={updateField('atendCold')} />
+              <div className="range-row">
+                <input type="range" min={0} max={30} step={1} value={inputs.atendCold} onChange={updateField('atendCold')} />
+                <span className="range-value">{inputs.atendCold}</span>
+              </div>
             </div>
             <div className="field">
               <label>Dias quentes/mês</label>
-              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.daysHot} onChange={updateField('daysHot')} />
+              <div className="range-row">
+                <input type="range" min={0} max={31} step={1} value={inputs.daysHot} onChange={updateField('daysHot')} />
+                <span className="range-value">{inputs.daysHot}</span>
+              </div>
             </div>
             <div className="field">
               <label>Dias frios/mês</label>
-              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.daysCold} onChange={updateField('daysCold')} />
+              <div className="range-row">
+                <input type="range" min={0} max={31} step={1} value={inputs.daysCold} onChange={updateField('daysCold')} />
+                <span className="range-value">{inputs.daysCold}</span>
+              </div>
             </div>
             <div className="field">
               <label>No-show (%)</label>
-              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.noShowRate * 100} onChange={(e) => setInputs((prev) => ({
-                ...prev,
-                noShowRate: parseNumber(e.target.value) / 100,
-              }))} />
+              <div className="range-row">
+                <input type="range" min={0} max={50} step={1} value={inputs.noShowRate * 100} onChange={(e) => setInputs((prev) => ({
+                  ...prev,
+                  noShowRate: parseNumber(e.target.value) / 100,
+                }))} />
+                <span className="range-value">{formatNumber(inputs.noShowRate * 100)}%</span>
+              </div>
             </div>
           </div>
         </div>
@@ -260,88 +275,61 @@ export default function App() {
           <div className="group">
             <div className="field">
               <label>Aluguel mensal</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*[.,]?[0-9]*"
-                value={inputs.adminRent}
-                onChange={updateField('adminRent')}
-              />
+              <div className="range-row">
+                <input type="range" min={0} max={50000} step={500} value={inputs.adminRent} onChange={updateField('adminRent')} />
+                <span className="range-value">{formatCurrency(inputs.adminRent)}</span>
+              </div>
             </div>
           </div>
           <div className="group">
             <h4>Folha administrativa</h4>
             <div className="field">
               <label>Manobristas (qtd)</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*[.,]?[0-9]*"
-                value={inputs.adminStaff.manobristas.qty}
-                onChange={updateAdminStaff('manobristas', 'qty')}
-              />
+              <div className="range-row">
+                <input type="range" min={0} max={10} step={1} value={inputs.adminStaff.manobristas.qty} onChange={updateAdminStaff('manobristas', 'qty')} />
+                <span className="range-value">{inputs.adminStaff.manobristas.qty}</span>
+              </div>
               <label>Salário manobrista</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*[.,]?[0-9]*"
-                value={inputs.adminStaff.manobristas.salary}
-                onChange={updateAdminStaff('manobristas', 'salary')}
-              />
+              <div className="range-row">
+                <input type="range" min={0} max={15000} step={100} value={inputs.adminStaff.manobristas.salary} onChange={updateAdminStaff('manobristas', 'salary')} />
+                <span className="range-value">{formatCurrency(inputs.adminStaff.manobristas.salary)}</span>
+              </div>
             </div>
             <div className="field">
               <label>Recepcionistas (qtd)</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*[.,]?[0-9]*"
-                value={inputs.adminStaff.recepcionistas.qty}
-                onChange={updateAdminStaff('recepcionistas', 'qty')}
-              />
+              <div className="range-row">
+                <input type="range" min={0} max={10} step={1} value={inputs.adminStaff.recepcionistas.qty} onChange={updateAdminStaff('recepcionistas', 'qty')} />
+                <span className="range-value">{inputs.adminStaff.recepcionistas.qty}</span>
+              </div>
               <label>Salário recepcionista</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*[.,]?[0-9]*"
-                value={inputs.adminStaff.recepcionistas.salary}
-                onChange={updateAdminStaff('recepcionistas', 'salary')}
-              />
+              <div className="range-row">
+                <input type="range" min={0} max={15000} step={100} value={inputs.adminStaff.recepcionistas.salary} onChange={updateAdminStaff('recepcionistas', 'salary')} />
+                <span className="range-value">{formatCurrency(inputs.adminStaff.recepcionistas.salary)}</span>
+              </div>
             </div>
             <div className="field">
               <label>Copeiras (qtd)</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*[.,]?[0-9]*"
-                value={inputs.adminStaff.copeiras.qty}
-                onChange={updateAdminStaff('copeiras', 'qty')}
-              />
+              <div className="range-row">
+                <input type="range" min={0} max={10} step={1} value={inputs.adminStaff.copeiras.qty} onChange={updateAdminStaff('copeiras', 'qty')} />
+                <span className="range-value">{inputs.adminStaff.copeiras.qty}</span>
+              </div>
               <label>Salário copeira</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*[.,]?[0-9]*"
-                value={inputs.adminStaff.copeiras.salary}
-                onChange={updateAdminStaff('copeiras', 'salary')}
-              />
+              <div className="range-row">
+                <input type="range" min={0} max={15000} step={100} value={inputs.adminStaff.copeiras.salary} onChange={updateAdminStaff('copeiras', 'salary')} />
+                <span className="range-value">{formatCurrency(inputs.adminStaff.copeiras.salary)}</span>
+              </div>
             </div>
             <div className="field">
               <label>Gerente (qtd)</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*[.,]?[0-9]*"
-                value={inputs.adminStaff.gerente.qty}
-                onChange={updateAdminStaff('gerente', 'qty')}
-              />
+              <div className="range-row">
+                <input type="range" min={0} max={5} step={1} value={inputs.adminStaff.gerente.qty} onChange={updateAdminStaff('gerente', 'qty')} />
+                <span className="range-value">{inputs.adminStaff.gerente.qty}</span>
+              </div>
               <label>Salário gerente</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*[.,]?[0-9]*"
-                value={inputs.adminStaff.gerente.salary}
-                onChange={updateAdminStaff('gerente', 'salary')}
-              />
+              <div className="range-row">
+                <input type="range" min={0} max={20000} step={500} value={inputs.adminStaff.gerente.salary} onChange={updateAdminStaff('gerente', 'salary')} />
+                <span className="range-value">{formatCurrency(inputs.adminStaff.gerente.salary)}</span>
+              </div>
             </div>
           </div>
           <p className="note">Nota: salários multiplicados por 1,8 para encargos.</p>
@@ -355,25 +343,37 @@ export default function App() {
           <div className="group">
             <div className="field">
               <label>Custo variável por sessão</label>
-              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.variableCostPerSession} onChange={updateField('variableCostPerSession')} />
+              <div className="range-row">
+                <input type="range" min={0} max={200} step={1} value={inputs.variableCostPerSession} onChange={updateField('variableCostPerSession')} />
+                <span className="range-value">{formatCurrency(inputs.variableCostPerSession)}</span>
+              </div>
             </div>
             <div className="field">
               <label>Extra variável por sessão</label>
-              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.extraVariablePerSession} onChange={updateField('extraVariablePerSession')} />
+              <div className="range-row">
+                <input type="range" min={0} max={200} step={1} value={inputs.extraVariablePerSession} onChange={updateField('extraVariablePerSession')} />
+                <span className="range-value">{formatCurrency(inputs.extraVariablePerSession)}</span>
+              </div>
             </div>
             <div className="field">
               <label>Comissão (%)</label>
-              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.commissionRate * 100} onChange={(e) => setInputs((prev) => ({
-                ...prev,
-                commissionRate: parseNumber(e.target.value) / 100,
-              }))} />
+              <div className="range-row">
+                <input type="range" min={0} max={50} step={1} value={inputs.commissionRate * 100} onChange={(e) => setInputs((prev) => ({
+                  ...prev,
+                  commissionRate: parseNumber(e.target.value) / 100,
+                }))} />
+                <span className="range-value">{formatNumber(inputs.commissionRate * 100)}%</span>
+              </div>
             </div>
             <div className="field">
               <label>Taxa de cartão (%)</label>
-              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.cardFeeRate * 100} onChange={(e) => setInputs((prev) => ({
-                ...prev,
-                cardFeeRate: parseNumber(e.target.value) / 100,
-              }))} />
+              <div className="range-row">
+                <input type="range" min={0} max={20} step={1} value={inputs.cardFeeRate * 100} onChange={(e) => setInputs((prev) => ({
+                  ...prev,
+                  cardFeeRate: parseNumber(e.target.value) / 100,
+                }))} />
+                <span className="range-value">{formatNumber(inputs.cardFeeRate * 100)}%</span>
+              </div>
             </div>
           </div>
 
@@ -381,15 +381,24 @@ export default function App() {
             <h4>Custos fixos</h4>
             <div className="field">
               <label>Nº de terapeutas</label>
-              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.therapists} onChange={updateField('therapists')} />
+              <div className="range-row">
+                <input type="range" min={0} max={30} step={1} value={inputs.therapists} onChange={updateField('therapists')} />
+                <span className="range-value">{inputs.therapists}</span>
+              </div>
             </div>
             <div className="field">
               <label>Salário fixo por terapeuta</label>
-              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.fixedSalary} onChange={updateField('fixedSalary')} />
+              <div className="range-row">
+                <input type="range" min={0} max={5000} step={50} value={inputs.fixedSalary} onChange={updateField('fixedSalary')} />
+                <span className="range-value">{formatCurrency(inputs.fixedSalary)}</span>
+              </div>
             </div>
             <div className="field">
               <label>Outros custos fixos</label>
-              <input type="text" inputMode="numeric" pattern="[0-9]*[.,]?[0-9]*" value={inputs.otherFixedCosts} onChange={updateField('otherFixedCosts')} />
+              <div className="range-row">
+                <input type="range" min={0} max={50000} step={500} value={inputs.otherFixedCosts} onChange={updateField('otherFixedCosts')} />
+                <span className="range-value">{formatCurrency(inputs.otherFixedCosts)}</span>
+              </div>
             </div>
           </div>
         </div>
