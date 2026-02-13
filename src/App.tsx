@@ -421,9 +421,10 @@ export default function App() {
               <div className="mix-row mix-row-2col" key={service.id}>
                 <span>{service.name} {service.duration}</span>
                 <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*[.,]?[0-9]*"
+                  className="mix-spinner"
+                  type="number"
+                  step="0.01"
+                  min="0"
                   value={
                     serviceTicketDraft[service.id] ??
                     (inputs.serviceTicketOverride[service.id] ??
@@ -456,9 +457,11 @@ export default function App() {
               <div className="mix-row mix-row-2col" key={`${service.id}-pct`}>
                 <span>{service.name} {service.duration}</span>
                 <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*[.,]?[0-9]*"
+                  className="mix-spinner"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="100"
                   value={
                     serviceMixDraft[service.id] ??
                     String(inputs.serviceMix[service.id] ?? '')

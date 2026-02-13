@@ -322,6 +322,16 @@ input[type='number']::-webkit-inner-spin-button {
   margin: 0;
 }
 
+input.mix-spinner {
+  -moz-appearance: auto;
+}
+
+input.mix-spinner::-webkit-outer-spin-button,
+input.mix-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: auto;
+  margin: 0;
+}
+
 input:focus {
   outline: 2px solid #c7ad5c;
   outline-offset: 2px;
@@ -508,6 +518,11 @@ th {
     border-bottom: 1px solid #2f2b24;
     padding: 16px 18px;
     margin: -12px -12px 12px;
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    pointer-events: auto;
   }
 
   .mobile-title {
@@ -528,7 +543,7 @@ th {
   }
 
   .page {
-    padding-top: 32px;
+    padding-top: 110px;
   }
 
   .mobile-metrics span {
