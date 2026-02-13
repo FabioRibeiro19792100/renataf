@@ -92,15 +92,19 @@ export const baseInputs = {
   extraVariablePerSession: 0,
   commissionRate: 0.15,
   cardFeeRate: 0.05,
-  fixedSalary: 1900,
-  therapists: 10,
-  otherFixedCosts: 0,
-  adminRent: 20000,
   adminStaff: {
+    terapeutas: { qty: 10, salary: 1900 },
     manobristas: { qty: 3, salary: 2100 },
     recepcionistas: { qty: 3, salary: 3100 },
     copeiras: { qty: 2, salary: 2900 },
     gerente: { qty: 1, salary: 10000 },
+  },
+  fixedExpenses: {
+    rent: 20000,
+    electricity: 0,
+    water: 0,
+    internet: 0,
+    other: 0,
   },
 }
 

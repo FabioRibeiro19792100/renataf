@@ -90,14 +90,14 @@ export const calculate = (inputs: Inputs) => {
   const cardFees = revenue * inputs.cardFeeRate
   const commissions = revenue * inputs.commissionRate
 
-  const fixedCosts = inputs.therapists * inputs.fixedSalary + inputs.otherFixedCosts
   const adminPayrollBase = Object.values(inputs.adminStaff).reduce((acc, role) => {
     return acc + role.qty * role.salary
   }, 0)
   const adminPayroll = adminPayrollBase * 1.8
-  const adminCosts = inputs.adminRent + adminPayroll
+  const fixedExpenses = Object.values(inputs.fixedExpenses).reduce((acc, value) => acc + value, 0)
+  const adminCosts = adminPayroll
 
-  const totalExpenses = variableCosts + cardFees + commissions + fixedCosts + adminCosts
+  const totalExpenses = variableCosts + cardFees + commissions + adminCosts + fixedExpenses
   const result = revenue - totalExpenses
 
   return {
@@ -113,9 +113,9 @@ export const calculate = (inputs: Inputs) => {
     variableCosts,
     cardFees,
     commissions,
-    fixedCosts,
     adminPayroll,
     adminCosts,
+    fixedExpenses,
     totalExpenses,
     result,
   }

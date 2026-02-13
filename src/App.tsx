@@ -24,7 +24,12 @@ export default function App() {
     if (window.innerWidth <= 720) {
       document
         .querySelectorAll('details.card-accordion')
-        .forEach((detail) => detail.removeAttribute('open'))
+        .forEach((detail) => {
+          const kind = detail.getAttribute('data-accordion')
+          if (kind === 'revenue' || kind === 'expenses') {
+            detail.removeAttribute('open')
+          }
+        })
     }
   }, [])
 
@@ -61,6 +66,15 @@ export default function App() {
           ...prev.adminStaff,
           [role]: { ...prev.adminStaff[role], [key]: value },
         },
+      }))
+    }
+
+  const updateFixedExpenses = (key: keyof Inputs['fixedExpenses']) =>
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const value = parseNumber(event.target.value)
+      setInputs((prev) => ({
+        ...prev,
+        fixedExpenses: { ...prev.fixedExpenses, [key]: value },
       }))
     }
 
@@ -151,9 +165,6 @@ export default function App() {
         <div>
           <p className="eyebrow">Dashboard financeiro</p>
           <h1>SPA • Simulador de Receita e Resultado</h1>
-          <p className="sub">
-            
-          </p>
         </div>
         <div />
       </header>
@@ -176,7 +187,7 @@ export default function App() {
         </div>
       </div>
       <section className="cards">
-        <details className="card card-accordion">
+        <details className="card card-accordion" data-accordion="revenue" open>
           <summary className="card-summary">
             <div>
               <p>Receita mensal</p>
@@ -189,7 +200,7 @@ export default function App() {
             <div className="row"><span>Receita anual</span><strong>{formatCurrency(results.revenue * 12)}</strong></div>
           </div>
         </details>
-        <details className="card card-accordion">
+        <details className="card card-accordion" data-accordion="expenses" open>
           <summary className="card-summary">
             <div>
               <p>Despesas mensais</p>
@@ -200,11 +211,11 @@ export default function App() {
             <div className="row"><span>Variáveis</span><strong>{formatCurrency(results.variableCosts)}</strong></div>
             <div className="row"><span>Comissões</span><strong>{formatCurrency(results.commissions)}</strong></div>
             <div className="row"><span>Taxa de cartão</span><strong>{formatCurrency(results.cardFees)}</strong></div>
-            <div className="row"><span>Fixos</span><strong>{formatCurrency(results.fixedCosts)}</strong></div>
-            <div className="row"><span>Admin + aluguel</span><strong>{formatCurrency(results.adminCosts)}</strong></div>
+            <div className="row"><span>Folha administrativa</span><strong>{formatCurrency(results.adminCosts)}</strong></div>
+            <div className="row"><span>Despesas fixas</span><strong>{formatCurrency(results.fixedExpenses)}</strong></div>
           </div>
         </details>
-        <details className="card card-accordion highlight">
+        <details className="card card-accordion highlight" data-accordion="result" open>
           <summary className="card-summary">
             <div>
               <p>Resultado mensal</p>
@@ -212,56 +223,226 @@ export default function App() {
             </div>
           </summary>
           <div className="card-details">
-            <div className="row"><span>Resultado anual</span><strong>{formatCurrency(results.result * 12)}</strong></div>
+            <div className="row">
+              <span className="disclaimer">(não inclui pró-labore, royalties, impostos e depreciação de investimento)</span>
+            </div>
           </div>
         </details>
       </section>
 
       <h2 className="section-title">Premissas</h2>
       <section className="grid">
-        <div className="panel">
-          <div className="panel-header">
-            <h3>Volume</h3>
-            <p>Premissas de atendimentos.</p>
+        <div className="column-stack">
+          <div className="panel">
+            <div className="panel-header">
+              <h3>Volume</h3>
+            </div>
+            <div className="group">
+              <div className="field">
+                <label>Atendimentos/dia (quente)</label>
+                <div className="range-row">
+                  <input type="range" min={0} max={40} step={1} value={inputs.atendHot} onChange={updateField('atendHot')} />
+                  <span className="range-value">{inputs.atendHot}</span>
+                </div>
+              </div>
+              <div className="field">
+                <label>Atendimentos/dia (frio)</label>
+                <div className="range-row">
+                  <input type="range" min={0} max={30} step={1} value={inputs.atendCold} onChange={updateField('atendCold')} />
+                  <span className="range-value">{inputs.atendCold}</span>
+                </div>
+              </div>
+              <div className="field">
+                <label>Dias quentes/mês</label>
+                <div className="range-row">
+                  <input type="range" min={0} max={31} step={1} value={inputs.daysHot} onChange={updateField('daysHot')} />
+                  <span className="range-value">{inputs.daysHot}</span>
+                </div>
+              </div>
+              <div className="field">
+                <label>Dias frios/mês</label>
+                <div className="range-row">
+                  <input type="range" min={0} max={31} step={1} value={inputs.daysCold} onChange={updateField('daysCold')} />
+                  <span className="range-value">{inputs.daysCold}</span>
+                </div>
+              </div>
+              <div className="field">
+                <label>No-show (%)</label>
+                <div className="range-row">
+                  <input type="range" min={0} max={50} step={1} value={inputs.noShowRate * 100} onChange={(e) => setInputs((prev) => ({
+                    ...prev,
+                    noShowRate: parseNumber(e.target.value) / 100,
+                  }))} />
+                  <span className="range-value">{formatNumber(inputs.noShowRate * 100)}%</span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="group">
-            <div className="field">
-              <label>Atendimentos/dia (quente)</label>
-              <div className="range-row">
-                <input type="range" min={0} max={40} step={1} value={inputs.atendHot} onChange={updateField('atendHot')} />
-                <span className="range-value">{inputs.atendHot}</span>
+          <div className="panel">
+            <div className="panel-header">
+              <h3>Mix de serviços</h3>
+              {Math.abs(results.serviceMixSum - 100) > 0.01 && (
+                <p className="warning">A soma deve ser 100%. Ajuste manualmente.</p>
+              )}
+            </div>
+            <div className="mix-table mix-desktop">
+              <div className="mix-head">
+                <span>Serviço</span>
+                <span>Ticket (R$)</span>
+                <span>Mix (%)</span>
+              </div>
+              {services.map((service) => (
+                <div className="mix-row" key={service.id}>
+                  <span>{service.name} {service.duration}</span>
+                  <div className="mix-field">
+                    <span className="mix-label">Ticket (R$)</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={
+                        serviceTicketDraft[service.id] ??
+                        (inputs.serviceTicketOverride[service.id] ??
+                          results.avgPriceByService.find((item) => item.id === service.id)?.avgPrice ??
+                          0).toFixed(2)
+                      }
+                      onChange={(e) =>
+                        setServiceTicketDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
+                      }
+                      onBlur={(e) => {
+                        commitServiceTicket(service.id, e.target.value)
+                        setServiceTicketDraft((prev) => {
+                          const next = { ...prev }
+                          delete next[service.id]
+                          return next
+                        })
+                      }}
+                    />
+                  </div>
+                  <div className="mix-field">
+                    <span className="mix-label">Mix (%)</span>
+                    <input
+                      className="mix-percent"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      value={
+                        serviceMixDraft[service.id] ??
+                        String(Math.round(inputs.serviceMix[service.id] ?? 0))
+                      }
+                      onFocus={(e) =>
+                        setServiceMixDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
+                      }
+                      onChange={(e) =>
+                        setServiceMixDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
+                      }
+                      onBlur={(e) => {
+                        commitServiceMix(service.id, e.target.value)
+                        setServiceMixDraft((prev) => {
+                          const next = { ...prev }
+                          delete next[service.id]
+                          return next
+                        })
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          commitServiceMix(service.id, (e.target as HTMLInputElement).value)
+                          setServiceMixDraft((prev) => {
+                            const next = { ...prev }
+                            delete next[service.id]
+                            return next
+                          })
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+              <div className="mix-total">
+                <span>Total</span>
+                <span />
+                <span>{formatNumber(results.serviceMixSum)}%</span>
               </div>
             </div>
-            <div className="field">
-              <label>Atendimentos/dia (frio)</label>
-              <div className="range-row">
-                <input type="range" min={0} max={30} step={1} value={inputs.atendCold} onChange={updateField('atendCold')} />
-                <span className="range-value">{inputs.atendCold}</span>
+            <div className="mix-mobile">
+              <div className="mix-card">
+                <h4>Ticket (R$)</h4>
+                {services.map((service) => (
+                  <div className="mix-card-row" key={`${service.id}-ticket`}>
+                    <span>{service.name} {service.duration}</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={
+                        serviceTicketDraft[service.id] ??
+                        (inputs.serviceTicketOverride[service.id] ??
+                          results.avgPriceByService.find((item) => item.id === service.id)?.avgPrice ??
+                          0).toFixed(2)
+                      }
+                      onChange={(e) =>
+                        setServiceTicketDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
+                      }
+                      onBlur={(e) => {
+                        commitServiceTicket(service.id, e.target.value)
+                        setServiceTicketDraft((prev) => {
+                          const next = { ...prev }
+                          delete next[service.id]
+                          return next
+                        })
+                      }}
+                    />
+                  </div>
+                ))}
               </div>
-            </div>
-            <div className="field">
-              <label>Dias quentes/mês</label>
-              <div className="range-row">
-                <input type="range" min={0} max={31} step={1} value={inputs.daysHot} onChange={updateField('daysHot')} />
-                <span className="range-value">{inputs.daysHot}</span>
-              </div>
-            </div>
-            <div className="field">
-              <label>Dias frios/mês</label>
-              <div className="range-row">
-                <input type="range" min={0} max={31} step={1} value={inputs.daysCold} onChange={updateField('daysCold')} />
-                <span className="range-value">{inputs.daysCold}</span>
-              </div>
-            </div>
-            <div className="field">
-              <label>No-show (%)</label>
-              <div className="range-row">
-                <input type="range" min={0} max={50} step={1} value={inputs.noShowRate * 100} onChange={(e) => setInputs((prev) => ({
-                  ...prev,
-                  noShowRate: parseNumber(e.target.value) / 100,
-                }))} />
-                <span className="range-value">{formatNumber(inputs.noShowRate * 100)}%</span>
+              <div className="mix-card">
+                <h4>Mix (%)</h4>
+                {services.map((service) => (
+                  <div className="mix-card-row" key={`${service.id}-mix`}>
+                    <span>{service.name} {service.duration}</span>
+                    <input
+                      className="mix-percent"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      value={
+                        serviceMixDraft[service.id] ??
+                        String(Math.round(inputs.serviceMix[service.id] ?? 0))
+                      }
+                      onFocus={(e) =>
+                        setServiceMixDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
+                      }
+                      onChange={(e) =>
+                        setServiceMixDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
+                      }
+                      onBlur={(e) => {
+                        commitServiceMix(service.id, e.target.value)
+                        setServiceMixDraft((prev) => {
+                          const next = { ...prev }
+                          delete next[service.id]
+                          return next
+                        })
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          commitServiceMix(service.id, (e.target as HTMLInputElement).value)
+                          setServiceMixDraft((prev) => {
+                            const next = { ...prev }
+                            delete next[service.id]
+                            return next
+                          })
+                        }
+                      }}
+                    />
+                  </div>
+                ))}
+                <div className="mix-total">
+                  <span>Total</span>
+                  <span>{formatNumber(results.serviceMixSum)}%</span>
+                </div>
               </div>
             </div>
           </div>
@@ -269,20 +450,21 @@ export default function App() {
 
         <div className="panel">
           <div className="panel-header">
-            <h3>Despesas a confirmar</h3>
-            <p>Aluguel e folha administrativa.</p>
+            <h3>Folha administrativa</h3>
           </div>
           <div className="group">
             <div className="field">
-              <label>Aluguel mensal</label>
+              <label>Terapeutas (qtd)</label>
               <div className="range-row">
-                <input type="range" min={0} max={50000} step={500} value={inputs.adminRent} onChange={updateField('adminRent')} />
-                <span className="range-value">{formatCurrency(inputs.adminRent)}</span>
+                <input type="range" min={0} max={30} step={1} value={inputs.adminStaff.terapeutas.qty} onChange={updateAdminStaff('terapeutas', 'qty')} />
+                <span className="range-value">{inputs.adminStaff.terapeutas.qty}</span>
+              </div>
+              <label>Salário terapeuta</label>
+              <div className="range-row">
+                <input type="range" min={0} max={5000} step={50} value={inputs.adminStaff.terapeutas.salary} onChange={updateAdminStaff('terapeutas', 'salary')} />
+                <span className="range-value">{formatCurrency(inputs.adminStaff.terapeutas.salary)}</span>
               </div>
             </div>
-          </div>
-          <div className="group">
-            <h4>Folha administrativa</h4>
             <div className="field">
               <label>Manobristas (qtd)</label>
               <div className="range-row">
@@ -335,168 +517,89 @@ export default function App() {
           <p className="note">Nota: salários multiplicados por 1,8 para encargos.</p>
         </div>
 
-        <div className="panel">
-          <div className="panel-header">
-            <h3>Custos e comissões</h3>
-            <p>Premissas financeiras.</p>
-          </div>
-          <div className="group">
-            <div className="field">
-              <label>Custo variável por sessão</label>
-              <div className="range-row">
-                <input type="range" min={0} max={200} step={1} value={inputs.variableCostPerSession} onChange={updateField('variableCostPerSession')} />
-                <span className="range-value">{formatCurrency(inputs.variableCostPerSession)}</span>
-              </div>
+        <div className="column-stack">
+          <div className="panel">
+            <div className="panel-header">
+              <h3>Despesas fixas</h3>
             </div>
-            <div className="field">
-              <label>Extra variável por sessão</label>
-              <div className="range-row">
-                <input type="range" min={0} max={200} step={1} value={inputs.extraVariablePerSession} onChange={updateField('extraVariablePerSession')} />
-                <span className="range-value">{formatCurrency(inputs.extraVariablePerSession)}</span>
+            <div className="group">
+              <div className="field">
+                <label>Aluguel mensal</label>
+                <div className="range-row">
+                  <input type="range" min={0} max={50000} step={500} value={inputs.fixedExpenses.rent} onChange={updateFixedExpenses('rent')} />
+                  <span className="range-value">{formatCurrency(inputs.fixedExpenses.rent)}</span>
+                </div>
               </div>
-            </div>
-            <div className="field">
-              <label>Comissão (%)</label>
-              <div className="range-row">
-                <input type="range" min={0} max={50} step={1} value={inputs.commissionRate * 100} onChange={(e) => setInputs((prev) => ({
-                  ...prev,
-                  commissionRate: parseNumber(e.target.value) / 100,
-                }))} />
-                <span className="range-value">{formatNumber(inputs.commissionRate * 100)}%</span>
+              <div className="field">
+                <label>Luz</label>
+                <div className="range-row">
+                  <input type="range" min={0} max={3000} step={50} value={inputs.fixedExpenses.electricity} onChange={updateFixedExpenses('electricity')} />
+                  <span className="range-value">{formatCurrency(inputs.fixedExpenses.electricity)}</span>
+                </div>
               </div>
-            </div>
-            <div className="field">
-              <label>Taxa de cartão (%)</label>
-              <div className="range-row">
-                <input type="range" min={0} max={20} step={1} value={inputs.cardFeeRate * 100} onChange={(e) => setInputs((prev) => ({
-                  ...prev,
-                  cardFeeRate: parseNumber(e.target.value) / 100,
-                }))} />
-                <span className="range-value">{formatNumber(inputs.cardFeeRate * 100)}%</span>
+              <div className="field">
+                <label>Água</label>
+                <div className="range-row">
+                  <input type="range" min={0} max={3000} step={50} value={inputs.fixedExpenses.water} onChange={updateFixedExpenses('water')} />
+                  <span className="range-value">{formatCurrency(inputs.fixedExpenses.water)}</span>
+                </div>
+              </div>
+              <div className="field">
+                <label>Internet</label>
+                <div className="range-row">
+                  <input type="range" min={0} max={3000} step={50} value={inputs.fixedExpenses.internet} onChange={updateFixedExpenses('internet')} />
+                  <span className="range-value">{formatCurrency(inputs.fixedExpenses.internet)}</span>
+                </div>
+              </div>
+              <div className="field">
+                <label>Outros fixos</label>
+                <div className="range-row">
+                  <input type="range" min={0} max={3000} step={50} value={inputs.fixedExpenses.other} onChange={updateFixedExpenses('other')} />
+                  <span className="range-value">{formatCurrency(inputs.fixedExpenses.other)}</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="group">
-            <h4>Custos fixos</h4>
-            <div className="field">
-              <label>Nº de terapeutas</label>
-              <div className="range-row">
-                <input type="range" min={0} max={30} step={1} value={inputs.therapists} onChange={updateField('therapists')} />
-                <span className="range-value">{inputs.therapists}</span>
+          <div className="panel">
+            <div className="panel-header">
+              <h3>Outras variáveis</h3>
+            </div>
+            <div className="group">
+              <div className="field">
+                <label>Custo variável por sessão</label>
+                <div className="range-row">
+                  <input type="range" min={0} max={200} step={1} value={inputs.variableCostPerSession} onChange={updateField('variableCostPerSession')} />
+                  <span className="range-value">{formatCurrency(inputs.variableCostPerSession)}</span>
+                </div>
               </div>
-            </div>
-            <div className="field">
-              <label>Salário fixo por terapeuta</label>
-              <div className="range-row">
-                <input type="range" min={0} max={5000} step={50} value={inputs.fixedSalary} onChange={updateField('fixedSalary')} />
-                <span className="range-value">{formatCurrency(inputs.fixedSalary)}</span>
+              <div className="field">
+                <label>Extra variável por sessão</label>
+                <div className="range-row">
+                  <input type="range" min={0} max={200} step={1} value={inputs.extraVariablePerSession} onChange={updateField('extraVariablePerSession')} />
+                  <span className="range-value">{formatCurrency(inputs.extraVariablePerSession)}</span>
+                </div>
               </div>
-            </div>
-            <div className="field">
-              <label>Outros custos fixos</label>
-              <div className="range-row">
-                <input type="range" min={0} max={50000} step={500} value={inputs.otherFixedCosts} onChange={updateField('otherFixedCosts')} />
-                <span className="range-value">{formatCurrency(inputs.otherFixedCosts)}</span>
+              <div className="field">
+                <label>Comissão (%)</label>
+                <div className="range-row">
+                  <input type="range" min={0} max={50} step={1} value={inputs.commissionRate * 100} onChange={(e) => setInputs((prev) => ({
+                    ...prev,
+                    commissionRate: parseNumber(e.target.value) / 100,
+                  }))} />
+                  <span className="range-value">{formatNumber(inputs.commissionRate * 100)}%</span>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="panel">
-          <div className="panel-header">
-            <h3>Mix de serviços</h3>
-            <p>Use porcentagens. Soma atual: {formatNumber(results.serviceMixSum)}%</p>
-            {Math.abs(results.serviceMixSum - 100) > 0.01 && (
-              <p className="warning">A soma deve ser 100%. Ajuste manualmente.</p>
-            )}
-          </div>
-          <div className="mix-section">
-            <div className="mix-table">
-            <div className="mix-head mix-head-2col">
-              <span>Serviço</span>
-              <span>Ticket médio (R$)</span>
-            </div>
-            {services.map((service) => (
-              <div className="mix-row mix-row-2col" key={service.id}>
-                <span>{service.name} {service.duration}</span>
-                <input
-                  className="mix-spinner"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={
-                    serviceTicketDraft[service.id] ??
-                    (inputs.serviceTicketOverride[service.id] ??
-                      results.avgPriceByService.find((item) => item.id === service.id)?.avgPrice ??
-                      0).toFixed(2)
-                  }
-                  onChange={(e) =>
-                    setServiceTicketDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
-                  }
-                  onBlur={(e) => {
-                    commitServiceTicket(service.id, e.target.value)
-                    setServiceTicketDraft((prev) => {
-                      const next = { ...prev }
-                      delete next[service.id]
-                      return next
-                    })
-                  }}
-                />
+              <div className="field">
+                <label>Taxa de cartão (%)</label>
+                <div className="range-row">
+                  <input type="range" min={0} max={20} step={1} value={inputs.cardFeeRate * 100} onChange={(e) => setInputs((prev) => ({
+                    ...prev,
+                    cardFeeRate: parseNumber(e.target.value) / 100,
+                  }))} />
+                  <span className="range-value">{formatNumber(inputs.cardFeeRate * 100)}%</span>
+                </div>
               </div>
-            ))}
-            </div>
-          </div>
-          <div className="mix-section">
-            <div className="mix-table">
-            <div className="mix-head mix-head-2col">
-              <span>Serviço</span>
-              <span>%</span>
-            </div>
-            {services.map((service) => (
-              <div className="mix-row mix-row-2col" key={`${service.id}-pct`}>
-                <span>{service.name} {service.duration}</span>
-                <input
-                  className="mix-spinner"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="100"
-                  value={
-                    serviceMixDraft[service.id] ??
-                    String(inputs.serviceMix[service.id] ?? '')
-                  }
-                  onFocus={(e) =>
-                    setServiceMixDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
-                  }
-                  onChange={(e) =>
-                    setServiceMixDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
-                  }
-                  onBlur={(e) => {
-                    commitServiceMix(service.id, e.target.value)
-                    setServiceMixDraft((prev) => {
-                      const next = { ...prev }
-                      delete next[service.id]
-                      return next
-                    })
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      commitServiceMix(service.id, (e.target as HTMLInputElement).value)
-                      setServiceMixDraft((prev) => {
-                        const next = { ...prev }
-                        delete next[service.id]
-                        return next
-                      })
-                    }
-                  }}
-                />
-              </div>
-            ))}
-            <div className="mix-total mix-total-2col">
-              <span>Total</span>
-              <span>{formatNumber(results.serviceMixSum)}%</span>
-            </div>
             </div>
           </div>
         </div>
