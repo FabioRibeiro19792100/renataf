@@ -83,7 +83,7 @@ export default function App() {
     if (!trimmed) {
       return
     }
-    const value = Math.max(parseNumber(trimmed), 0)
+    const value = Math.max(Math.round(parseNumber(trimmed)), 0)
     setInputs((prev) => {
       const othersSum = Object.entries(prev.serviceMix).reduce((acc, [key, val]) => {
         return key === id ? acc : acc + val
@@ -299,6 +299,8 @@ export default function App() {
                     <span className="mix-label">Ticket (R$)</span>
                     <input
                       type="number"
+                      inputMode="decimal"
+                      pattern="[0-9]*[.,]?[0-9]*"
                       step="0.01"
                       min="0"
                       value={
@@ -325,7 +327,9 @@ export default function App() {
                     <input
                       className="mix-percent"
                       type="number"
-                      step="0.1"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      step="1"
                       min="0"
                       max="100"
                       value={
@@ -335,9 +339,10 @@ export default function App() {
                       onFocus={(e) =>
                         setServiceMixDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
                       }
-                      onChange={(e) =>
-                        setServiceMixDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
-                      }
+                      onChange={(e) => {
+                        const cleaned = e.target.value.replace(/[^\d]/g, '')
+                        setServiceMixDraft((prev) => ({ ...prev, [service.id]: cleaned }))
+                      }}
                       onBlur={(e) => {
                         commitServiceMix(service.id, e.target.value)
                         setServiceMixDraft((prev) => {
@@ -363,7 +368,7 @@ export default function App() {
               <div className="mix-total">
                 <span>Total</span>
                 <span />
-                <span>{formatNumber(results.serviceMixSum)}%</span>
+                <span>{Math.round(results.serviceMixSum)}%</span>
               </div>
             </div>
             <div className="mix-mobile">
@@ -374,6 +379,8 @@ export default function App() {
                     <span>{service.name} {service.duration}</span>
                     <input
                       type="number"
+                      inputMode="decimal"
+                      pattern="[0-9]*[.,]?[0-9]*"
                       step="0.01"
                       min="0"
                       value={
@@ -405,7 +412,9 @@ export default function App() {
                     <input
                       className="mix-percent"
                       type="number"
-                      step="0.1"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      step="1"
                       min="0"
                       max="100"
                       value={
@@ -415,9 +424,10 @@ export default function App() {
                       onFocus={(e) =>
                         setServiceMixDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
                       }
-                      onChange={(e) =>
-                        setServiceMixDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
-                      }
+                      onChange={(e) => {
+                        const cleaned = e.target.value.replace(/[^\d]/g, '')
+                        setServiceMixDraft((prev) => ({ ...prev, [service.id]: cleaned }))
+                      }}
                       onBlur={(e) => {
                         commitServiceMix(service.id, e.target.value)
                         setServiceMixDraft((prev) => {
@@ -441,7 +451,7 @@ export default function App() {
                 ))}
                 <div className="mix-total">
                   <span>Total</span>
-                  <span>{formatNumber(results.serviceMixSum)}%</span>
+                  <span>{Math.round(results.serviceMixSum)}%</span>
                 </div>
               </div>
             </div>
