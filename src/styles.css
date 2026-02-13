@@ -32,6 +32,10 @@ body {
   margin-bottom: 24px;
 }
 
+.mobile-summary {
+  display: none;
+}
+
 .hero {
   display: flex;
   justify-content: space-between;
@@ -61,6 +65,36 @@ h1 {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: #6b6559;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.period-toggle {
+  display: flex;
+  border: 1px solid #2b2b2b;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.period-btn {
+  background: transparent;
+  border: none;
+  padding: 6px 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+
+.period-btn.active {
+  background: #2b2b2b;
+  color: #fdf3dc;
 }
 
 .sub {
@@ -138,7 +172,7 @@ h1 {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 20px;
 }
 
@@ -178,15 +212,19 @@ h1 {
   gap: 6px;
 }
 
-.mix-row {
+.mix-row,
+.mix-head,
+.mix-total {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 90px;
+  grid-template-columns: 1.6fr 1fr 110px;
   gap: 12px;
   align-items: center;
 }
 
-.mix-row-2col {
-  grid-template-columns: 1.2fr 1fr;
+.mix-row-2col,
+.mix-head-2col,
+.mix-total-2col {
+  grid-template-columns: 1.6fr 1fr;
 }
 
 .mix-label-mobile {
@@ -201,21 +239,26 @@ h1 {
 }
 
 .mix-head {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr 90px;
-  gap: 12px;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #6b6559;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  color: #2b2b2b;
+  font-family: inherit;
 }
 
 .mix-subtitle {
   margin: 8px 0 0;
-  font-size: 13px;
-  color: #6b6559;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2b2b2b;
+  font-family: inherit;
+}
+
+.mix-table {
+  font-size: 14px;
+  font-family: inherit;
+  color: #2b2b2b;
 }
 
 .mix-section {
@@ -225,16 +268,13 @@ h1 {
 }
 
 .mix-total-2col {
-  grid-template-columns: 1.2fr 1fr;
+  grid-template-columns: 1.6fr 1fr;
 }
 .mix-table input {
   width: 100%;
 }
 
 .mix-total {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr 90px;
-  gap: 12px;
   font-weight: 600;
   border-top: 1px dashed #e2ddd1;
   padding-top: 8px;
@@ -342,6 +382,12 @@ input:focus {
   flex-wrap: wrap;
 }
 
+.note {
+  margin: 0;
+  font-size: 12px;
+  color: #6b6559;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -434,6 +480,56 @@ th {
     grid-template-columns: 1fr;
   }
 
+  .mobile-summary {
+    display: grid;
+    gap: 6px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #1f1d1b;
+    border-bottom: 1px solid #2f2b24;
+    padding: 16px 18px;
+    margin: -12px -12px 12px;
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+  }
+
+  .mobile-title {
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #f7e9c7;
+  }
+
+  .mobile-summary--active .mobile-title {
+    font-size: 14px;
+  }
+
+  .mobile-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .page {
+    padding-top: 110px;
+  }
+
+  .mobile-metrics span {
+    font-size: 12px;
+    color: #f7e9c7;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .mobile-metrics strong {
+    display: block;
+    font-size: 16px;
+    color: #fff6dd;
+  }
+
   .card-accordion[open] .card-summary {
     border-bottom: 1px dashed #e2ddd1;
   }
@@ -455,6 +551,28 @@ th {
     align-items: flex-start;
   }
 
+  .topbar {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .topbar .ghost {
+    order: 0;
+    width: auto;
+    padding: 8px 12px;
+  }
+
+  .nav-tabs {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .tab {
+    padding: 8px 12px;
+  }
+
   .nav-tabs {
     flex-wrap: wrap;
   }
@@ -471,7 +589,7 @@ th {
   }
 
   .mix-head {
-    display: none;
+    display: grid;
   }
 
   .mix-row {
@@ -487,6 +605,12 @@ th {
 
   .mix-label-mobile {
     display: block;
+  }
+
+  .mix-head-2col,
+  .mix-row-2col,
+  .mix-total-2col {
+    grid-template-columns: 1fr 1fr;
   }
 
   .tables table {

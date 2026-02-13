@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import './styles.css'
 import { baseInputs, Inputs, services } from './variables'
 import { calculate, formatCurrency, formatNumber } from './calc'
@@ -17,6 +17,8 @@ export default function App() {
   const [inputs, setInputs] = useState<Inputs>(cloneInputs)
   const [serviceTicketDraft, setServiceTicketDraft] = useState<Record<string, string>>({})
   const [serviceMixDraft, setServiceMixDraft] = useState<Record<string, string>>({})
+  const [showMobileSummary, setShowMobileSummary] = useState(false)
+  const [resultPeriod, setResultPeriod] = useState<'monthly' | 'annual'>('monthly')
 
   useEffect(() => {
     if (window.innerWidth <= 720) {
@@ -26,12 +28,41 @@ export default function App() {
     }
   }, [])
 
+  useEffect(() => {
+    const updateSummary = () => {
+      if (window.innerWidth > 720) {
+        setShowMobileSummary(false)
+        return
+      }
+      setShowMobileSummary(window.scrollY > 120)
+    }
+    updateSummary()
+    window.addEventListener('scroll', updateSummary, { passive: true })
+    window.addEventListener('resize', updateSummary)
+    return () => {
+      window.removeEventListener('scroll', updateSummary)
+      window.removeEventListener('resize', updateSummary)
+    }
+  }, [])
+
   const results = useMemo(() => calculate(inputs), [inputs])
 
   const updateField = (key: keyof Inputs) => (event: ChangeEvent<HTMLInputElement>) => {
     const value = parseNumber(event.target.value)
     setInputs((prev) => ({ ...prev, [key]: value }))
   }
+
+  const updateAdminStaff = (role: keyof Inputs['adminStaff'], key: 'qty' | 'salary') =>
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const value = parseNumber(event.target.value)
+      setInputs((prev) => ({
+        ...prev,
+        adminStaff: {
+          ...prev.adminStaff,
+          [role]: { ...prev.adminStaff[role], [key]: value },
+        },
+      }))
+    }
 
   const commitServiceMix = (id: string, rawValue: string) => {
     const trimmed = rawValue.trim()
@@ -97,6 +128,25 @@ export default function App() {
         <Tables />
       ) : (
         <>
+          {showMobileSummary && (
+            <div className="mobile-summary mobile-summary--active">
+              <div className="mobile-title">SPA • Simulador de Receita e Resultado</div>
+              <div className="mobile-metrics">
+                <div>
+                  <span>Receita</span>
+                  <strong>{formatCurrency(results.revenue)}</strong>
+                </div>
+                <div>
+                  <span>Despesas</span>
+                  <strong>{formatCurrency(results.totalExpenses)}</strong>
+                </div>
+                <div>
+                  <span>Resultado</span>
+                  <strong>{formatCurrency(results.result)}</strong>
+                </div>
+              </div>
+            </div>
+          )}
       <header className="hero">
         <div>
           <p className="eyebrow">Dashboard financeiro</p>
@@ -108,13 +158,29 @@ export default function App() {
         <div />
       </header>
 
-      <h2 className="section-title">Resultados</h2>
+      <div className="section-title-row">
+        <h2 className="section-title">Resultados</h2>
+        <div className="period-toggle">
+          <button
+            className={`period-btn ${resultPeriod === 'monthly' ? 'active' : ''}`}
+            onClick={() => setResultPeriod('monthly')}
+          >
+            Mês
+          </button>
+          <button
+            className={`period-btn ${resultPeriod === 'annual' ? 'active' : ''}`}
+            onClick={() => setResultPeriod('annual')}
+          >
+            Ano
+          </button>
+        </div>
+      </div>
       <section className="cards">
         <details className="card card-accordion">
           <summary className="card-summary">
             <div>
               <p>Receita mensal</p>
-              <h2>{formatCurrency(results.revenue)}</h2>
+              <h2>{formatCurrency(results.revenue * (resultPeriod === 'annual' ? 12 : 1))}</h2>
             </div>
           </summary>
           <div className="card-details">
@@ -127,7 +193,7 @@ export default function App() {
           <summary className="card-summary">
             <div>
               <p>Despesas mensais</p>
-              <h2>{formatCurrency(results.totalExpenses)}</h2>
+              <h2>{formatCurrency(results.totalExpenses * (resultPeriod === 'annual' ? 12 : 1))}</h2>
             </div>
           </summary>
           <div className="card-details">
@@ -135,13 +201,14 @@ export default function App() {
             <div className="row"><span>Comissões</span><strong>{formatCurrency(results.commissions)}</strong></div>
             <div className="row"><span>Taxa de cartão</span><strong>{formatCurrency(results.cardFees)}</strong></div>
             <div className="row"><span>Fixos</span><strong>{formatCurrency(results.fixedCosts)}</strong></div>
+            <div className="row"><span>Admin + aluguel</span><strong>{formatCurrency(results.adminCosts)}</strong></div>
           </div>
         </details>
         <details className="card card-accordion highlight">
           <summary className="card-summary">
             <div>
               <p>Resultado mensal</p>
-              <h2>{formatCurrency(results.result)}</h2>
+              <h2>{formatCurrency(results.result * (resultPeriod === 'annual' ? 12 : 1))}</h2>
             </div>
           </summary>
           <div className="card-details">
@@ -183,6 +250,101 @@ export default function App() {
               }))} />
             </div>
           </div>
+        </div>
+
+        <div className="panel">
+          <div className="panel-header">
+            <h3>Despesas a confirmar</h3>
+            <p>Aluguel e folha administrativa.</p>
+          </div>
+          <div className="group">
+            <div className="field">
+              <label>Aluguel mensal</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*[.,]?[0-9]*"
+                value={inputs.adminRent}
+                onChange={updateField('adminRent')}
+              />
+            </div>
+          </div>
+          <div className="group">
+            <h4>Folha administrativa</h4>
+            <div className="field">
+              <label>Manobristas (qtd)</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*[.,]?[0-9]*"
+                value={inputs.adminStaff.manobristas.qty}
+                onChange={updateAdminStaff('manobristas', 'qty')}
+              />
+              <label>Salário manobrista</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*[.,]?[0-9]*"
+                value={inputs.adminStaff.manobristas.salary}
+                onChange={updateAdminStaff('manobristas', 'salary')}
+              />
+            </div>
+            <div className="field">
+              <label>Recepcionistas (qtd)</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*[.,]?[0-9]*"
+                value={inputs.adminStaff.recepcionistas.qty}
+                onChange={updateAdminStaff('recepcionistas', 'qty')}
+              />
+              <label>Salário recepcionista</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*[.,]?[0-9]*"
+                value={inputs.adminStaff.recepcionistas.salary}
+                onChange={updateAdminStaff('recepcionistas', 'salary')}
+              />
+            </div>
+            <div className="field">
+              <label>Copeiras (qtd)</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*[.,]?[0-9]*"
+                value={inputs.adminStaff.copeiras.qty}
+                onChange={updateAdminStaff('copeiras', 'qty')}
+              />
+              <label>Salário copeira</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*[.,]?[0-9]*"
+                value={inputs.adminStaff.copeiras.salary}
+                onChange={updateAdminStaff('copeiras', 'salary')}
+              />
+            </div>
+            <div className="field">
+              <label>Gerente (qtd)</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*[.,]?[0-9]*"
+                value={inputs.adminStaff.gerente.qty}
+                onChange={updateAdminStaff('gerente', 'qty')}
+              />
+              <label>Salário gerente</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*[.,]?[0-9]*"
+                value={inputs.adminStaff.gerente.salary}
+                onChange={updateAdminStaff('gerente', 'salary')}
+              />
+            </div>
+          </div>
+          <p className="note">Nota: salários multiplicados por 1,8 para encargos.</p>
         </div>
 
         <div className="panel">
@@ -241,9 +403,8 @@ export default function App() {
             )}
           </div>
           <div className="mix-section">
-            <h4 className="mix-subtitle">Ticket médio (R$)</h4>
             <div className="mix-table">
-            <div className="mix-head">
+            <div className="mix-head mix-head-2col">
               <span>Serviço</span>
               <span>Ticket médio (R$)</span>
             </div>
@@ -277,9 +438,8 @@ export default function App() {
             </div>
           </div>
           <div className="mix-section">
-            <h4 className="mix-subtitle">Percentual (%)</h4>
             <div className="mix-table">
-            <div className="mix-head">
+            <div className="mix-head mix-head-2col">
               <span>Serviço</span>
               <span>%</span>
             </div>

@@ -95,6 +95,13 @@ export const baseInputs = {
   fixedSalary: 1900,
   therapists: 10,
   otherFixedCosts: 0,
+  adminRent: 20000,
+  adminStaff: {
+    manobristas: { qty: 3, salary: 2100 },
+    recepcionistas: { qty: 3, salary: 3100 },
+    copeiras: { qty: 2, salary: 2900 },
+    gerente: { qty: 1, salary: 10000 },
+  },
 }
 
 export type Inputs = typeof baseInputs
