@@ -11,6 +11,7 @@ const parseNumber = (value: string) => {
 }
 
 const cloneInputs = () => JSON.parse(JSON.stringify(baseInputs)) as Inputs
+const getIncrementStep = (value: number) => (Math.abs(value) >= 100 ? 10 : 1)
 
 export default function App() {
   const [view, setView] = useState<'dashboard' | 'tables'>('dashboard')
@@ -112,6 +113,59 @@ export default function App() {
       ...prev,
       serviceTicketOverride: { ...prev.serviceTicketOverride, [id]: value },
     }))
+  }
+
+  const getDefaultServiceTicket = (id: string, sourceInputs: Inputs) => {
+    const service = services.find((item) => item.id === id)
+    if (!service) {
+      return 0
+    }
+    const { full, p5, p10, p20 } = sourceInputs.packageMix
+    return (
+      service.prices.full * (full / 100) +
+      service.prices.p5 * (p5 / 100) +
+      service.prices.p10 * (p10 / 100) +
+      service.prices.p20 * (p20 / 100)
+    )
+  }
+
+  const adjustServiceTicket = (id: string, direction: -1 | 1) => {
+    setServiceTicketDraft((prev) => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+    setInputs((prev) => {
+      const current = prev.serviceTicketOverride[id] ?? getDefaultServiceTicket(id, prev)
+      const step = getIncrementStep(current)
+      const nextValue = Math.max(current + step * direction, 0)
+      return {
+        ...prev,
+        serviceTicketOverride: { ...prev.serviceTicketOverride, [id]: Number(nextValue.toFixed(2)) },
+      }
+    })
+  }
+
+  const adjustServiceMix = (id: string, direction: -1 | 1) => {
+    setServiceMixDraft((prev) => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+    setInputs((prev) => {
+      const current = Math.round(prev.serviceMix[id] ?? 0)
+      const step = getIncrementStep(current)
+      const requested = Math.max(current + step * direction, 0)
+      const othersSum = Object.entries(prev.serviceMix).reduce((acc, [key, val]) => {
+        return key === id ? acc : acc + val
+      }, 0)
+      const maxAllowed = Math.max(0, 100 - othersSum)
+      const clamped = Math.min(requested, maxAllowed)
+      return {
+        ...prev,
+        serviceMix: { ...prev.serviceMix, [id]: clamped },
+      }
+    })
   }
 
   const resetInputs = () => setInputs(cloneInputs())
@@ -297,71 +351,107 @@ export default function App() {
                   <span>{service.name} {service.duration}</span>
                   <div className="mix-field">
                     <span className="mix-label">Ticket (R$)</span>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      pattern="[0-9]*[.,]?[0-9]*"
-                      step="0.01"
-                      min="0"
-                      value={
-                        serviceTicketDraft[service.id] ??
-                        (inputs.serviceTicketOverride[service.id] ??
-                          results.avgPriceByService.find((item) => item.id === service.id)?.avgPrice ??
-                          0).toFixed(2)
-                      }
-                      onChange={(e) =>
-                        setServiceTicketDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
-                      }
-                      onBlur={(e) => {
-                        commitServiceTicket(service.id, e.target.value)
-                        setServiceTicketDraft((prev) => {
-                          const next = { ...prev }
-                          delete next[service.id]
-                          return next
-                        })
-                      }}
-                    />
+                    <div className="mix-input-stepper">
+                      <button
+                        type="button"
+                        className="stepper-btn"
+                        aria-label={`Diminuir ticket de ${service.name} ${service.duration}`}
+                        onClick={() => adjustServiceTicket(service.id, -1)}
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        pattern="[0-9]*[.,]?[0-9]*"
+                        step="0.01"
+                        min="0"
+                        value={
+                          serviceTicketDraft[service.id] ??
+                          (inputs.serviceTicketOverride[service.id] ??
+                            results.avgPriceByService.find((item) => item.id === service.id)?.avgPrice ??
+                            0).toFixed(2)
+                        }
+                        onChange={(e) =>
+                          setServiceTicketDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
+                        }
+                        onBlur={(e) => {
+                          commitServiceTicket(service.id, e.target.value)
+                          setServiceTicketDraft((prev) => {
+                            const next = { ...prev }
+                            delete next[service.id]
+                            return next
+                          })
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="stepper-btn"
+                        aria-label={`Aumentar ticket de ${service.name} ${service.duration}`}
+                        onClick={() => adjustServiceTicket(service.id, 1)}
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                   <div className="mix-field">
                     <span className="mix-label">Mix (%)</span>
-                    <input
-                      className="mix-percent"
-                      type="number"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      step="1"
-                      min="0"
-                      max="100"
-                      value={
-                        serviceMixDraft[service.id] ??
-                        String(Math.round(inputs.serviceMix[service.id] ?? 0))
-                      }
-                      onFocus={(e) =>
-                        setServiceMixDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
-                      }
-                      onChange={(e) => {
-                        const cleaned = e.target.value.replace(/[^\d]/g, '')
-                        setServiceMixDraft((prev) => ({ ...prev, [service.id]: cleaned }))
-                      }}
-                      onBlur={(e) => {
-                        commitServiceMix(service.id, e.target.value)
-                        setServiceMixDraft((prev) => {
-                          const next = { ...prev }
-                          delete next[service.id]
-                          return next
-                        })
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          commitServiceMix(service.id, (e.target as HTMLInputElement).value)
+                    <div className="mix-input-stepper">
+                      <button
+                        type="button"
+                        className="stepper-btn"
+                        aria-label={`Diminuir mix de ${service.name} ${service.duration}`}
+                        onClick={() => adjustServiceMix(service.id, -1)}
+                      >
+                        -
+                      </button>
+                      <input
+                        className="mix-percent"
+                        type="number"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        step="1"
+                        min="0"
+                        max="100"
+                        value={
+                          serviceMixDraft[service.id] ??
+                          String(Math.round(inputs.serviceMix[service.id] ?? 0))
+                        }
+                        onFocus={(e) =>
+                          setServiceMixDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
+                        }
+                        onChange={(e) => {
+                          const cleaned = e.target.value.replace(/[^\d]/g, '')
+                          setServiceMixDraft((prev) => ({ ...prev, [service.id]: cleaned }))
+                        }}
+                        onBlur={(e) => {
+                          commitServiceMix(service.id, e.target.value)
                           setServiceMixDraft((prev) => {
                             const next = { ...prev }
                             delete next[service.id]
                             return next
                           })
-                        }
-                      }}
-                    />
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            commitServiceMix(service.id, (e.target as HTMLInputElement).value)
+                            setServiceMixDraft((prev) => {
+                              const next = { ...prev }
+                              delete next[service.id]
+                              return next
+                            })
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="stepper-btn"
+                        aria-label={`Aumentar mix de ${service.name} ${service.duration}`}
+                        onClick={() => adjustServiceMix(service.id, 1)}
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -534,17 +624,17 @@ export default function App() {
             </div>
             <div className="group">
               <div className="field">
-                <label>Aluguel mensal</label>
+                <label>Aluguel / IPTU</label>
                 <div className="range-row">
                   <input type="range" min={0} max={50000} step={500} value={inputs.fixedExpenses.rent} onChange={updateFixedExpenses('rent')} />
                   <span className="range-value">{formatCurrency(inputs.fixedExpenses.rent)}</span>
                 </div>
               </div>
               <div className="field">
-                <label>Luz</label>
+                <label>Produtos de atendimento (óleo e creme)</label>
                 <div className="range-row">
-                  <input type="range" min={0} max={3000} step={50} value={inputs.fixedExpenses.electricity} onChange={updateFixedExpenses('electricity')} />
-                  <span className="range-value">{formatCurrency(inputs.fixedExpenses.electricity)}</span>
+                  <input type="range" min={0} max={15000} step={100} value={inputs.fixedExpenses.serviceProducts} onChange={updateFixedExpenses('serviceProducts')} />
+                  <span className="range-value">{formatCurrency(inputs.fixedExpenses.serviceProducts)}</span>
                 </div>
               </div>
               <div className="field">
@@ -555,6 +645,20 @@ export default function App() {
                 </div>
               </div>
               <div className="field">
+                <label>Luz</label>
+                <div className="range-row">
+                  <input type="range" min={0} max={3000} step={50} value={inputs.fixedExpenses.electricity} onChange={updateFixedExpenses('electricity')} />
+                  <span className="range-value">{formatCurrency(inputs.fixedExpenses.electricity)}</span>
+                </div>
+              </div>
+              <div className="field">
+                <label>Lavanderia</label>
+                <div className="range-row">
+                  <input type="range" min={0} max={10000} step={100} value={inputs.fixedExpenses.laundry} onChange={updateFixedExpenses('laundry')} />
+                  <span className="range-value">{formatCurrency(inputs.fixedExpenses.laundry)}</span>
+                </div>
+              </div>
+              <div className="field">
                 <label>Internet</label>
                 <div className="range-row">
                   <input type="range" min={0} max={3000} step={50} value={inputs.fixedExpenses.internet} onChange={updateFixedExpenses('internet')} />
@@ -562,10 +666,45 @@ export default function App() {
                 </div>
               </div>
               <div className="field">
-                <label>Outros fixos</label>
+                <label>Ar condicionado</label>
                 <div className="range-row">
-                  <input type="range" min={0} max={3000} step={50} value={inputs.fixedExpenses.other} onChange={updateFixedExpenses('other')} />
-                  <span className="range-value">{formatCurrency(inputs.fixedExpenses.other)}</span>
+                  <input type="range" min={0} max={3000} step={50} value={inputs.fixedExpenses.airConditioning} onChange={updateFixedExpenses('airConditioning')} />
+                  <span className="range-value">{formatCurrency(inputs.fixedExpenses.airConditioning)}</span>
+                </div>
+              </div>
+              <div className="field">
+                <label>Software de agendamento</label>
+                <div className="range-row">
+                  <input type="range" min={0} max={5000} step={50} value={inputs.fixedExpenses.schedulingSoftware} onChange={updateFixedExpenses('schedulingSoftware')} />
+                  <span className="range-value">{formatCurrency(inputs.fixedExpenses.schedulingSoftware)}</span>
+                </div>
+              </div>
+              <div className="field">
+                <label>Contabilidade</label>
+                <div className="range-row">
+                  <input type="range" min={0} max={5000} step={50} value={inputs.fixedExpenses.accounting} onChange={updateFixedExpenses('accounting')} />
+                  <span className="range-value">{formatCurrency(inputs.fixedExpenses.accounting)}</span>
+                </div>
+              </div>
+              <div className="field">
+                <label>Produtos de limpeza / descartáveis</label>
+                <div className="range-row">
+                  <input type="range" min={0} max={5000} step={50} value={inputs.fixedExpenses.cleaningSupplies} onChange={updateFixedExpenses('cleaningSupplies')} />
+                  <span className="range-value">{formatCurrency(inputs.fixedExpenses.cleaningSupplies)}</span>
+                </div>
+              </div>
+              <div className="field">
+                <label>Estacionamento</label>
+                <div className="range-row">
+                  <input type="range" min={0} max={5000} step={50} value={inputs.fixedExpenses.parking} onChange={updateFixedExpenses('parking')} />
+                  <span className="range-value">{formatCurrency(inputs.fixedExpenses.parking)}</span>
+                </div>
+              </div>
+              <div className="field">
+                <label>Seguro carro clientes + alarme spa</label>
+                <div className="range-row">
+                  <input type="range" min={0} max={5000} step={50} value={inputs.fixedExpenses.insuranceAndAlarm} onChange={updateFixedExpenses('insuranceAndAlarm')} />
+                  <span className="range-value">{formatCurrency(inputs.fixedExpenses.insuranceAndAlarm)}</span>
                 </div>
               </div>
             </div>

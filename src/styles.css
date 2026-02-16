@@ -351,6 +351,28 @@ h1 {
   gap: 6px;
 }
 
+.mix-input-stepper {
+  display: grid;
+  grid-template-columns: 34px 1fr 34px;
+  gap: 8px;
+  align-items: center;
+}
+
+.stepper-btn {
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid #2b2b2b;
+  background: #fbfaf7;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.stepper-btn:focus-visible {
+  outline: 2px solid #c7ad5c;
+  outline-offset: 2px;
+}
+
 .mix-label {
   display: none;
   font-size: 11px;
