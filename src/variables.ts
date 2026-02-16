@@ -101,10 +101,17 @@ export const baseInputs = {
   },
   fixedExpenses: {
     rent: 20000,
-    electricity: 0,
-    water: 0,
-    internet: 0,
-    other: 0,
+    serviceProducts: 6000,
+    water: 600,
+    electricity: 800,
+    laundry: 4000,
+    internet: 300,
+    airConditioning: 430,
+    schedulingSoftware: 1400,
+    accounting: 2500,
+    cleaningSupplies: 2000,
+    parking: 2500,
+    insuranceAndAlarm: 1800,
   },
 }
 

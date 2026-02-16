@@ -12,6 +12,13 @@ const parseNumber = (value: string) => {
 
 const cloneInputs = () => JSON.parse(JSON.stringify(baseInputs)) as Inputs
 const getIncrementStep = (value: number) => (Math.abs(value) >= 100 ? 10 : 1)
+const normalizeTicketValue = (value: number) => {
+  const rounded = Math.round(value)
+  if (rounded >= 100) {
+    return Math.round(rounded / 10) * 10
+  }
+  return rounded
+}
 
 export default function App() {
   const [view, setView] = useState<'dashboard' | 'tables'>('dashboard')
@@ -19,35 +26,25 @@ export default function App() {
   const [serviceTicketDraft, setServiceTicketDraft] = useState<Record<string, string>>({})
   const [serviceMixDraft, setServiceMixDraft] = useState<Record<string, string>>({})
   const [showMobileSummary, setShowMobileSummary] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 720)
   const [resultPeriod, setResultPeriod] = useState<'monthly' | 'annual'>('monthly')
 
   useEffect(() => {
-    if (window.innerWidth <= 720) {
-      document
-        .querySelectorAll('details.card-accordion')
-        .forEach((detail) => {
-          const kind = detail.getAttribute('data-accordion')
-          if (kind === 'revenue' || kind === 'expenses') {
-            detail.removeAttribute('open')
-          }
-        })
-    }
-  }, [])
-
-  useEffect(() => {
-    const updateSummary = () => {
-      if (window.innerWidth > 720) {
+    const updateViewportState = () => {
+      const mobile = window.innerWidth <= 720
+      setIsMobile(mobile)
+      if (!mobile) {
         setShowMobileSummary(false)
         return
       }
       setShowMobileSummary(window.scrollY > 120)
     }
-    updateSummary()
-    window.addEventListener('scroll', updateSummary, { passive: true })
-    window.addEventListener('resize', updateSummary)
+    updateViewportState()
+    window.addEventListener('scroll', updateViewportState, { passive: true })
+    window.addEventListener('resize', updateViewportState)
     return () => {
-      window.removeEventListener('scroll', updateSummary)
-      window.removeEventListener('resize', updateSummary)
+      window.removeEventListener('scroll', updateViewportState)
+      window.removeEventListener('resize', updateViewportState)
     }
   }, [])
 
@@ -108,7 +105,7 @@ export default function App() {
       })
       return
     }
-    const value = Math.max(parseNumber(trimmed), 0)
+    const value = Math.max(normalizeTicketValue(parseNumber(trimmed)), 0)
     setInputs((prev) => ({
       ...prev,
       serviceTicketOverride: { ...prev.serviceTicketOverride, [id]: value },
@@ -137,11 +134,12 @@ export default function App() {
     })
     setInputs((prev) => {
       const current = prev.serviceTicketOverride[id] ?? getDefaultServiceTicket(id, prev)
-      const step = getIncrementStep(current)
-      const nextValue = Math.max(current + step * direction, 0)
+      const normalizedCurrent = normalizeTicketValue(current)
+      const step = getIncrementStep(normalizedCurrent)
+      const nextValue = Math.max(normalizedCurrent + step * direction, 0)
       return {
         ...prev,
-        serviceTicketOverride: { ...prev.serviceTicketOverride, [id]: Number(nextValue.toFixed(2)) },
+        serviceTicketOverride: { ...prev.serviceTicketOverride, [id]: nextValue },
       }
     })
   }
@@ -241,7 +239,7 @@ export default function App() {
         </div>
       </div>
       <section className="cards">
-        <details className="card card-accordion" data-accordion="revenue" open>
+        <details className="card card-accordion" data-accordion="revenue" open={!isMobile}>
           <summary className="card-summary">
             <div>
               <p>Receita mensal</p>
@@ -254,7 +252,7 @@ export default function App() {
             <div className="row"><span>Receita anual</span><strong>{formatCurrency(results.revenue * 12)}</strong></div>
           </div>
         </details>
-        <details className="card card-accordion" data-accordion="expenses" open>
+        <details className="card card-accordion" data-accordion="expenses" open={!isMobile}>
           <summary className="card-summary">
             <div>
               <p>Despesas mensais</p>
@@ -269,7 +267,7 @@ export default function App() {
             <div className="row"><span>Despesas fixas</span><strong>{formatCurrency(results.fixedExpenses)}</strong></div>
           </div>
         </details>
-        <details className="card card-accordion highlight" data-accordion="result" open>
+        <details className="card card-accordion highlight" data-accordion="result" open={!isMobile}>
           <summary className="card-summary">
             <div>
               <p>Resultado mensal</p>
@@ -337,7 +335,7 @@ export default function App() {
             <div className="panel-header">
               <h3>Mix de serviços</h3>
               {Math.abs(results.serviceMixSum - 100) > 0.01 && (
-                <p className="warning">A soma deve ser 100%. Ajuste manualmente.</p>
+                <p className="warning warning-desktop">A soma deve ser 100%. Ajuste manualmente.</p>
               )}
             </div>
             <div className="mix-table mix-desktop">
@@ -362,15 +360,15 @@ export default function App() {
                       </button>
                       <input
                         type="number"
-                        inputMode="decimal"
-                        pattern="[0-9]*[.,]?[0-9]*"
-                        step="0.01"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        step="1"
                         min="0"
                         value={
                           serviceTicketDraft[service.id] ??
                           (inputs.serviceTicketOverride[service.id] ??
                             results.avgPriceByService.find((item) => item.id === service.id)?.avgPrice ??
-                            0).toFixed(2)
+                            0).toFixed(0)
                         }
                         onChange={(e) =>
                           setServiceTicketDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
@@ -467,79 +465,118 @@ export default function App() {
                 {services.map((service) => (
                   <div className="mix-card-row" key={`${service.id}-ticket`}>
                     <span>{service.name} {service.duration}</span>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      pattern="[0-9]*[.,]?[0-9]*"
-                      step="0.01"
-                      min="0"
-                      value={
-                        serviceTicketDraft[service.id] ??
-                        (inputs.serviceTicketOverride[service.id] ??
-                          results.avgPriceByService.find((item) => item.id === service.id)?.avgPrice ??
-                          0).toFixed(2)
-                      }
-                      onChange={(e) =>
-                        setServiceTicketDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
-                      }
-                      onBlur={(e) => {
-                        commitServiceTicket(service.id, e.target.value)
-                        setServiceTicketDraft((prev) => {
-                          const next = { ...prev }
-                          delete next[service.id]
-                          return next
-                        })
-                      }}
-                    />
+                    <div className="mix-input-stepper">
+                      <button
+                        type="button"
+                        className="stepper-btn"
+                        aria-label={`Diminuir ticket de ${service.name} ${service.duration}`}
+                        onClick={() => adjustServiceTicket(service.id, -1)}
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        step="1"
+                        min="0"
+                        value={
+                          serviceTicketDraft[service.id] ??
+                          (inputs.serviceTicketOverride[service.id] ??
+                            results.avgPriceByService.find((item) => item.id === service.id)?.avgPrice ??
+                            0).toFixed(0)
+                        }
+                        onChange={(e) =>
+                          setServiceTicketDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
+                        }
+                        onBlur={(e) => {
+                          commitServiceTicket(service.id, e.target.value)
+                          setServiceTicketDraft((prev) => {
+                            const next = { ...prev }
+                            delete next[service.id]
+                            return next
+                          })
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="stepper-btn"
+                        aria-label={`Aumentar ticket de ${service.name} ${service.duration}`}
+                        onClick={() => adjustServiceTicket(service.id, 1)}
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
+              {Math.abs(results.serviceMixSum - 100) > 0.01 && (
+                <p className="warning warning-mobile">A soma deve ser 100%. Ajuste manualmente.</p>
+              )}
               <div className="mix-card">
                 <h4>Mix (%)</h4>
                 {services.map((service) => (
                   <div className="mix-card-row" key={`${service.id}-mix`}>
                     <span>{service.name} {service.duration}</span>
-                    <input
-                      className="mix-percent"
-                      type="number"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      step="1"
-                      min="0"
-                      max="100"
-                      value={
-                        serviceMixDraft[service.id] ??
-                        String(Math.round(inputs.serviceMix[service.id] ?? 0))
-                      }
-                      onFocus={(e) =>
-                        setServiceMixDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
-                      }
-                      onChange={(e) => {
-                        const cleaned = e.target.value.replace(/[^\d]/g, '')
-                        setServiceMixDraft((prev) => ({ ...prev, [service.id]: cleaned }))
-                      }}
-                      onBlur={(e) => {
-                        commitServiceMix(service.id, e.target.value)
-                        setServiceMixDraft((prev) => {
-                          const next = { ...prev }
-                          delete next[service.id]
-                          return next
-                        })
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          commitServiceMix(service.id, (e.target as HTMLInputElement).value)
+                    <div className="mix-input-stepper">
+                      <button
+                        type="button"
+                        className="stepper-btn"
+                        aria-label={`Diminuir mix de ${service.name} ${service.duration}`}
+                        onClick={() => adjustServiceMix(service.id, -1)}
+                      >
+                        -
+                      </button>
+                      <input
+                        className="mix-percent"
+                        type="number"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        step="1"
+                        min="0"
+                        max="100"
+                        value={
+                          serviceMixDraft[service.id] ??
+                          String(Math.round(inputs.serviceMix[service.id] ?? 0))
+                        }
+                        onFocus={(e) =>
+                          setServiceMixDraft((prev) => ({ ...prev, [service.id]: e.target.value }))
+                        }
+                        onChange={(e) => {
+                          const cleaned = e.target.value.replace(/[^\d]/g, '')
+                          setServiceMixDraft((prev) => ({ ...prev, [service.id]: cleaned }))
+                        }}
+                        onBlur={(e) => {
+                          commitServiceMix(service.id, e.target.value)
                           setServiceMixDraft((prev) => {
                             const next = { ...prev }
                             delete next[service.id]
                             return next
                           })
-                        }
-                      }}
-                    />
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            commitServiceMix(service.id, (e.target as HTMLInputElement).value)
+                            setServiceMixDraft((prev) => {
+                              const next = { ...prev }
+                              delete next[service.id]
+                              return next
+                            })
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="stepper-btn"
+                        aria-label={`Aumentar mix de ${service.name} ${service.duration}`}
+                        onClick={() => adjustServiceMix(service.id, 1)}
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                 ))}
-                <div className="mix-total">
+                <div className="mix-total mix-total-mobile">
                   <span>Total</span>
                   <span>{Math.round(results.serviceMixSum)}%</span>
                 </div>
