@@ -3,6 +3,7 @@ import './styles.css'
 import { baseInputs, Inputs, services } from './variables'
 import { calculate, formatCurrency, formatNumber } from './calc'
 import Tables from './Tables'
+import { hasSupabaseConfig, supabase } from './supabase'
 
 const parseNumber = (value: string) => {
   const normalized = value.replace(',', '.')
@@ -11,6 +12,8 @@ const parseNumber = (value: string) => {
 }
 
 const cloneInputs = () => JSON.parse(JSON.stringify(baseInputs)) as Inputs
+const INPUTS_STORAGE_KEY = 'spa-dashboard:inputs:v1'
+const SUPABASE_ROW_ID = 'default'
 const getIncrementStep = (value: number) => (Math.abs(value) >= 100 ? 10 : 1)
 const normalizeTicketValue = (value: number) => {
   const rounded = Math.round(value)
@@ -20,14 +23,65 @@ const normalizeTicketValue = (value: number) => {
   return rounded
 }
 
+const mergeInputs = (base: Inputs, partial?: Partial<Inputs>): Inputs => {
+  if (!partial) {
+    return base
+  }
+  return {
+    ...base,
+    ...partial,
+    packageMix: { ...base.packageMix, ...(partial.packageMix ?? {}) },
+    serviceTicketOverride: { ...base.serviceTicketOverride, ...(partial.serviceTicketOverride ?? {}) },
+    serviceMix: { ...base.serviceMix, ...(partial.serviceMix ?? {}) },
+    adminStaff: {
+      terapeutas: {
+        ...base.adminStaff.terapeutas,
+        ...(partial.adminStaff?.terapeutas ?? {}),
+      },
+      manobristas: {
+        ...base.adminStaff.manobristas,
+        ...(partial.adminStaff?.manobristas ?? {}),
+      },
+      recepcionistas: {
+        ...base.adminStaff.recepcionistas,
+        ...(partial.adminStaff?.recepcionistas ?? {}),
+      },
+      copeiras: {
+        ...base.adminStaff.copeiras,
+        ...(partial.adminStaff?.copeiras ?? {}),
+      },
+      gerente: {
+        ...base.adminStaff.gerente,
+        ...(partial.adminStaff?.gerente ?? {}),
+      },
+    },
+    fixedExpenses: { ...base.fixedExpenses, ...(partial.fixedExpenses ?? {}) },
+  }
+}
+
+const loadSavedInputs = (): Inputs => {
+  const fallback = cloneInputs()
+  try {
+    const raw = window.localStorage.getItem(INPUTS_STORAGE_KEY)
+    if (!raw) {
+      return fallback
+    }
+    const parsed = JSON.parse(raw) as Partial<Inputs>
+    return mergeInputs(fallback, parsed)
+  } catch {
+    return fallback
+  }
+}
+
 export default function App() {
   const [view, setView] = useState<'dashboard' | 'tables'>('dashboard')
-  const [inputs, setInputs] = useState<Inputs>(cloneInputs)
+  const [inputs, setInputs] = useState<Inputs>(loadSavedInputs)
   const [serviceTicketDraft, setServiceTicketDraft] = useState<Record<string, string>>({})
   const [serviceMixDraft, setServiceMixDraft] = useState<Record<string, string>>({})
   const [showMobileSummary, setShowMobileSummary] = useState(false)
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 720)
   const [resultPeriod, setResultPeriod] = useState<'monthly' | 'annual'>('monthly')
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
   useEffect(() => {
     const updateViewportState = () => {
@@ -49,6 +103,46 @@ export default function App() {
   }, [])
 
   const results = useMemo(() => calculate(inputs), [inputs])
+
+  useEffect(() => {
+    if (saveStatus === 'idle' || saveStatus === 'saving') {
+      return
+    }
+    const timeout = window.setTimeout(() => setSaveStatus('idle'), 2500)
+    return () => window.clearTimeout(timeout)
+  }, [saveStatus])
+
+  useEffect(() => {
+    let isMounted = true
+    const loadFromSupabase = async () => {
+      if (!hasSupabaseConfig || !supabase) {
+        return
+      }
+      const { data, error } = await supabase
+        .from('spa_dashboard_inputs')
+        .select('data')
+        .eq('id', SUPABASE_ROW_ID)
+        .maybeSingle()
+
+      if (error) {
+        return
+      }
+
+      const remoteData = data?.data as Partial<Inputs> | undefined
+      if (!remoteData || !isMounted) {
+        return
+      }
+
+      const merged = mergeInputs(cloneInputs(), remoteData)
+      setInputs(merged)
+      window.localStorage.setItem(INPUTS_STORAGE_KEY, JSON.stringify(merged))
+    }
+
+    void loadFromSupabase()
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const updateField = (key: keyof Inputs) => (event: ChangeEvent<HTMLInputElement>) => {
     const value = parseNumber(event.target.value)
@@ -167,6 +261,23 @@ export default function App() {
   }
 
   const resetInputs = () => setInputs(cloneInputs())
+  const saveInputs = async () => {
+    setSaveStatus('saving')
+    try {
+      window.localStorage.setItem(INPUTS_STORAGE_KEY, JSON.stringify(inputs))
+      if (hasSupabaseConfig && supabase) {
+        const { error } = await supabase
+          .from('spa_dashboard_inputs')
+          .upsert({ id: SUPABASE_ROW_ID, data: inputs })
+        if (error) {
+          throw error
+        }
+      }
+      setSaveStatus('saved')
+    } catch {
+      setSaveStatus('error')
+    }
+  }
 
   return (
     <div className="page">
@@ -185,7 +296,15 @@ export default function App() {
             Tabelas
           </button>
           {view === 'dashboard' && (
-            <button className="ghost" onClick={resetInputs}>Resetar variáveis</button>
+            <>
+              <button className="ghost" onClick={saveInputs}>Salvar</button>
+              <button className="ghost" onClick={resetInputs}>Resetar variáveis</button>
+              {saveStatus !== 'idle' && (
+                <span className={`save-status ${saveStatus === 'error' ? 'error' : ''}`}>
+                  {saveStatus === 'saving' ? 'Salvando...' : saveStatus === 'saved' ? 'Salvo' : 'Erro ao salvar'}
+                </span>
+              )}
+            </>
           )}
         </nav>
       </header>

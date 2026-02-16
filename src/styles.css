@@ -541,6 +541,7 @@ input:focus {
 .nav-tabs {
   display: flex;
   gap: 10px;
+  align-items: center;
 }
 
 .tab {
@@ -565,6 +566,18 @@ input:focus {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.save-status {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1f7a35;
+}
+
+.save-status.error {
+  color: #a53825;
 }
 
 .note {
@@ -774,6 +787,11 @@ th {
 
   .nav-tabs {
     flex-wrap: wrap;
+  }
+
+  .save-status {
+    width: 100%;
+    margin-top: 4px;
   }
 
   .mix-table,
